@@ -1,0 +1,124 @@
+# =============================================================================
+# fullstack-starter - stack base (tipo producción)
+#   mysql + backend (jar en JRE) + admin-web (build estático en nginx)
+# En desarrollo se aplica automáticamente docker-compose.override.yml.
+# Solo base (sin override):  docker compose -f docker-compose.yml up -d --build
+# Todas las variables salen de .env (ver .env.example).
+# =============================================================================
+name: fullstack-starter
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  mysql:
+    image: mysql:8.4.11
+    <<: *restart
+    # Config por flags (no por conf.d montado: en Windows los bind mounts son
+    # world-writable y MySQL ignora esos .cnf).
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --skip-name-resolve
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app
+    healthcheck:
+      # -h 127.0.0.1 fuerza TCP: durante la init el server temporal no escucha
+      # por red, así que no da "healthy" antes de tiempo.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+      start_interval: 2s
+
+  backend:
+    build:
+      context: .
+      dockerfile: infra/docker/backend/Dockerfile
+      target: runtime
+    image: fullstack-starter/backend:local
+    <<: *restart
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-app}
+      JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-PT15M}
+      JWT_REFRESH_TOKEN_TTL: ${JWT_REFRESH_TOKEN_TTL:-P30D}
+      PASSWORD_RESET_TTL: ${PASSWORD_RESET_TTL:-PT1H}
+      SESSION_CHECK_CACHE_TTL: ${SESSION_CHECK_CACHE_TTL:-PT30S}
+      INVITATION_TTL: ${INVITATION_TTL:-PT72H}
+      LOGIN_MAX_ATTEMPTS: ${LOGIN_MAX_ATTEMPTS:-5}
+      LOGIN_LOCK_DURATION: ${LOGIN_LOCK_DURATION:-PT15M}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      APP_PUBLIC_WEB_URL: ${APP_PUBLIC_WEB_URL}
+      ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
+      ADMIN_BOOTSTRAP_FIRST_NAME: ${ADMIN_BOOTSTRAP_FIRST_NAME:-}
+      ADMIN_BOOTSTRAP_LAST_NAME: ${ADMIN_BOOTSTRAP_LAST_NAME:-}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      MAIL_FROM: ${MAIL_FROM}
+      MAIL_ENABLED: ${MAIL_ENABLED:-true}
+      MAIL_SMTP_TIMEOUT_MS: ${MAIL_SMTP_TIMEOUT_MS:-5000}
+      ADMIN_NOTIFY_EMAIL: ${ADMIN_NOTIFY_EMAIL:-}
+    networks:
+      - app
+    # Sin puertos publicados: en la base el backend solo se alcanza vía nginx.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+      start_interval: 5s
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: infra/docker/admin-web/Dockerfile
+      target: runtime
+    image: fullstack-starter/admin-web:local
+    <<: *restart
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
+    ports:
+      - "${ADMIN_WEB_HOST_PORT:-8088}:80"
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  app:
+    name: fullstack-starter-net
+
+volumes:
+  mysql-data:

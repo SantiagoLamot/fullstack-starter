@@ -1,0 +1,18 @@
+# Contexto = raíz del repo; solo lo que necesita el admin web.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!apps/admin-web
+!apps/mobile/package.json
+!packages
+!infra/docker/admin-web
+**/node_modules
+**/dist
+**/.vite
+**/coverage
+**/*.tsbuildinfo
+**/.eslintcache
+**/.env
+**/.env.*

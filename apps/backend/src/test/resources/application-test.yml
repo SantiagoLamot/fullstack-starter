@@ -1,0 +1,14 @@
+# Test profile: the datasource comes from Testcontainers (@ServiceConnection).
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+  security:
+    jwt:
+      # Test-only secret (>= 32 bytes, Base64). Never use it outside tests.
+      secret: dGVzdC1zZWNyZXQtZm9yLXN0YXJ0ZXItaW50ZWdyYXRpb24tdGVzdHMtMDEyMzQ1Njc4OQ==
+      issuer: app-test
+
+logging:
+  level:
+    org.testcontainers: INFO
+    tc: INFO

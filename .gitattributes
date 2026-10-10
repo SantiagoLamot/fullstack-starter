@@ -1,0 +1,33 @@
+# Force LF everywhere (Windows + Mac, files run inside Linux containers)
+* text=auto eol=lf
+
+*.sh      text eol=lf
+*.ps1     text eol=lf
+mvnw      text eol=lf
+Dockerfile* text eol=lf
+*.java    text eol=lf
+*.ts      text eol=lf
+*.tsx     text eol=lf
+*.json    text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.md      text eol=lf
+*.properties text eol=lf
+
+# Windows-only wrapper keeps CRLF so cmd.exe can run it
+*.cmd     text eol=crlf
+*.bat     text eol=crlf
+
+# Binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.jar binary
+*.pdf binary

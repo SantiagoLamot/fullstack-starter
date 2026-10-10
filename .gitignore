@@ -1,0 +1,44 @@
+# Secrets / local config
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# Node
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+*.tsbuildinfo
+.eslintcache
+
+# Expo / React Native
+.expo/
+web-build/
+apps/mobile/ios/
+apps/mobile/android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.log
+hs_err_pid*
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# Brandbook original (pesado; assets extraidos en docs/brand/assets)
+marca/

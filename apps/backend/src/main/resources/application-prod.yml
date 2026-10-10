@@ -1,0 +1,16 @@
+# Production profile. Swagger/API docs stay disabled (defaults in application.yml).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+spring:
+  devtools:
+    restart:
+      enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.example.app: INFO

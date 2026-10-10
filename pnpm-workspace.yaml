@@ -1,0 +1,29 @@
+packages:
+  - "apps/admin-web"
+  - "apps/mobile"
+  - "packages/*"
+
+# pnpm >= 11 ya no lee settings (salvo auth/registry) desde .npmrc: el layout va acá.
+# Hoisted (sin symlinks por paquete): más robusto con Metro/Expo y con bind mounts
+# de Docker en Windows. Ver docs/adr/0003-monorepo-pnpm.md
+nodeLinker: hoisted
+
+# eslint (unrs-resolver) y jest-expo/watchman (@parcel/watcher) traen binarios nativos con
+# script de build; pnpm >= 10 los ignora por defecto (protección de supply-chain) y sin
+# esto `pnpm install`/`pnpm add` fallan con ERR_PNPM_IGNORED_BUILDS en apps/mobile.
+# Generado por `pnpm approve-builds --all` (no editar el nombre de la clave a mano: en
+# esta versión de pnpm es `allowBuilds`, no `onlyBuiltDependencies`).
+allowBuilds:
+  '@parcel/watcher': true
+  unrs-resolver: true
+enablePrePostScripts: true
+
+# Agregado automáticamente por pnpm al instalar paquetes de Expo publicados hace pocos
+# días (protección de supply-chain "minimum release age"): sin esto, `pnpm install`
+# rechaza esas versiones hasta que maduren. No hace falta tocarlo a mano.
+minimumReleaseAgeExclude:
+  - "@expo/ui@57.0.21"
+  - expo-constants@57.0.20
+  - expo-router@57.0.24
+  - expo-modules-core@57.0.20
+  - expo@57.0.26

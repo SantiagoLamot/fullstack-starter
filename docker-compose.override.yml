@@ -1,0 +1,248 @@
+# =============================================================================
+# fullstack-starter - overrides de DESARROLLO (se aplican solos con `docker compose`)
+#   backend  : código montado, devtools + recompilación automática, debug 5005
+#   admin-web: Vite dev server con HMR (5173)
+#   mobile   : Expo / Metro (8081)
+#   adminer, mailpit
+#   tools    : servicios auxiliares de scripts/ (profile "tools", no arrancan
+#              con `up`): node-tools, backend-test
+# Todo watcher respeta DEV_FILE_POLLING (true en Windows, false en Mac).
+# =============================================================================
+
+x-node-dev-env: &node-dev-env
+  TZ: ${TZ:-America/Argentina/Buenos_Aires}
+  NODE_ENV: development
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+  PNPM_STORE_DIR: /pnpm/store
+  DEV_FILE_POLLING: ${DEV_FILE_POLLING:-false}
+  DEV_FILE_POLLING_INTERVAL_MS: ${DEV_FILE_POLLING_INTERVAL_MS:-1000}
+  # Derivados para chokidar/watchpack (los respetan varias herramientas node)
+  CHOKIDAR_USEPOLLING: ${DEV_FILE_POLLING:-false}
+  CHOKIDAR_INTERVAL: ${DEV_FILE_POLLING_INTERVAL_MS:-1000}
+  WATCHPACK_POLLING: ${DEV_FILE_POLLING:-false}
+
+services:
+  mysql:
+    ports:
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3306}:3306"
+
+  backend:
+    build:
+      target: dev
+    image: fullstack-starter/backend-dev:local
+    init: true
+    depends_on:
+      mailpit:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      # Seed de usuarios de prueba (solo dev; sin password no se crea ese usuario)
+      METRICS_HASH_SECRET: ${METRICS_HASH_SECRET:-dev-only-metrics-hash-secret-0123456789}
+      DEV_SEED_ADMIN_EMAIL: ${DEV_SEED_ADMIN_EMAIL:-admin@example.local}
+      DEV_SEED_ADMIN_PASSWORD: ${DEV_SEED_ADMIN_PASSWORD:-}
+      DEV_SEED_USER_EMAIL: ${DEV_SEED_USER_EMAIL:-user@example.local}
+      DEV_SEED_USER_PASSWORD: ${DEV_SEED_USER_PASSWORD:-}
+      ACCESS_QR_SECRET: ${ACCESS_QR_SECRET:-dev-only-access-qr-secret-0123456789-abcdefgh}
+      # DevTools reinicia solo cuando el watcher toca target/classes/.reloadtrigger
+      # tras una compilación OK (evita restarts a mitad de compilación).
+      SPRING_DEVTOOLS_RESTART_TRIGGERFILE: .reloadtrigger
+      DEV_FILE_POLLING: ${DEV_FILE_POLLING:-false}
+      DEV_FILE_POLLING_INTERVAL_MS: ${DEV_FILE_POLLING_INTERVAL_MS:-1000}
+      # JVM de Maven y del compilador del watcher: arranque rápido
+      MAVEN_OPTS: -XX:TieredStopAtLevel=1 -XX:+UseSerialGC
+    volumes:
+      - ./apps/backend:/app
+      - m2:/root/.m2
+      # target/ en volumen nombrado: I/O nativo (no bind mount de Windows) y sin
+      # pisarse con builds del IDE del host. DevTools vigila /app/target/classes
+      # dentro del contenedor, así que el restart funciona igual.
+      - backend-target:/app/target
+    ports:
+      - "${BACKEND_HOST_PORT:-8080}:8080"
+      - "127.0.0.1:${BACKEND_DEBUG_PORT:-5005}:5005"
+    healthcheck:
+      # Primer arranque: Maven descarga dependencias (puede tardar minutos).
+      start_period: 600s
+      start_interval: 5s
+
+  admin-web:
+    build:
+      target: dev
+    image: fullstack-starter/admin-web-dev:local
+    init: true
+    working_dir: /repo
+    # Guarda un hash de pnpm-lock.yaml + pnpm-workspace.yaml dentro del propio
+    # volumen de node_modules; si cambió (o es la primera vez), limpia el
+    # CONTENIDO de los 3 volúmenes de node_modules de admin-web (no el
+    # mountpoint) antes de reinstalar. Evita quedar con un layout viejo
+    # (p. ej. de antes de nodeLinker: hoisted) que `pnpm install` normal no
+    # corrige solo porque el lockfile "ya está al día" (visto en QA de cierre:
+    # bins rotos en apps/admin-web/node_modules/.bin apuntando a un `.pnpm/`
+    # que ya no se genera).
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        cd /repo
+        NEW_HASH="$$(cat pnpm-lock.yaml pnpm-workspace.yaml 2>/dev/null | md5sum | cut -d' ' -f1)"
+        OLD_HASH="$$(cat node_modules/.install-guard 2>/dev/null || true)"
+        if [ "$$NEW_HASH" != "$$OLD_HASH" ]; then
+          echo "[admin-web] pnpm-lock.yaml/pnpm-workspace.yaml cambiaron (o primer arranque del volumen): limpiando node_modules antes de reinstalar"
+          for d in node_modules apps/admin-web/node_modules packages/api-types/node_modules; do
+            find "$$d" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+          done
+        fi
+        pnpm install --filter "@app/admin-web..." --store-dir /pnpm/store --config.confirm-modules-purge=false
+        mkdir -p node_modules
+        echo "$$NEW_HASH" > node_modules/.install-guard
+        exec pnpm --filter @app/admin-web dev --host 0.0.0.0
+    environment:
+      <<: *node-dev-env
+      VITE_API_PROXY_TARGET: http://backend:8080
+    volumes:
+      - .:/repo
+      - admin-web-node-modules:/repo/node_modules
+      - admin-web-app-node-modules:/repo/apps/admin-web/node_modules
+      - admin-web-api-types-node-modules:/repo/packages/api-types/node_modules
+      - pnpm-store:/pnpm/store
+    # !override: en dev NO se publica el 8088 (nginx) de la base, solo Vite.
+    ports: !override
+      - "${ADMIN_WEB_DEV_HOST_PORT:-5173}:5173"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
+      start_interval: 5s
+
+  mobile:
+    build:
+      context: ./infra/docker/mobile
+      dockerfile: Dockerfile
+    image: fullstack-starter/mobile-dev:local
+    restart: unless-stopped
+    init: true
+    # Expo CLI interactivo necesita TTY (CI=false)
+    tty: true
+    stdin_open: true
+    working_dir: /repo
+    environment:
+      <<: *node-dev-env
+      CI: "false"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_TUNNEL: ${EXPO_TUNNEL:-false}
+      # Token de cuenta Expo (secreto, solo .env). Expo Go en iPhone exige sesion en la app y en el CLI.
+      EXPO_TOKEN: ${EXPO_TOKEN:-}
+      EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL}
+      EAS_PROJECT_ID: ${EAS_PROJECT_ID:-}
+      REACT_NATIVE_PACKAGER_HOSTNAME: ${REACT_NATIVE_PACKAGER_HOSTNAME}
+    volumes:
+      - .:/repo
+      - mobile-node-modules:/repo/node_modules
+      - mobile-api-types-node-modules:/repo/packages/api-types/node_modules
+      - pnpm-store:/pnpm/store
+    ports:
+      # Metro anuncia 8081 al celular: mantener EXPO_HOST_PORT=8081.
+      - "${EXPO_HOST_PORT:-8081}:8081"
+    networks:
+      - app
+    healthcheck:
+      # Mientras apps/mobile no exista el servicio está "en espera" y sano.
+      test: ["CMD-SHELL", "[ ! -f /repo/apps/mobile/package.json ] || curl -fsS http://127.0.0.1:8081/status | grep -q running"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 600s
+      start_interval: 5s
+
+  adminer:
+    image: adminer:6
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    ports:
+      - "127.0.0.1:${ADMINER_HOST_PORT:-8089}:8080"
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/') === false ? 1 : 0);"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mailpit:
+    image: axllent/mailpit:v1.31
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+      MP_MAX_MESSAGES: "2000"
+    # SMTP 1025 solo en la red interna (backend -> mailpit:1025)
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_HOST_PORT:-8025}:8025"
+    networks:
+      - app
+    # La imagen trae HEALTHCHECK propio (`/mailpit readyz`)
+
+  # ---------------------------------------------------------------------------
+  # Herramientas (profile "tools"): las usan scripts/*. No arrancan con `up`.
+  # ---------------------------------------------------------------------------
+  node-tools:
+    profiles: ["tools"]
+    image: node:24-bookworm-slim
+    working_dir: /repo
+    environment:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    volumes:
+      - .:/repo
+      - node-tools-cache:/root/.cache
+    networks:
+      - app
+
+  backend-test:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: infra/docker/backend/Dockerfile
+      target: dev
+    image: fullstack-starter/backend-dev:local
+    working_dir: /app
+    entrypoint: ["sh", "./mvnw", "-B"]
+    command: ["verify"]
+    environment:
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
+      MAVEN_OPTS: -XX:TieredStopAtLevel=1
+      # Testcontainers desde dentro de un contenedor (Docker Desktop / Linux)
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+      TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./apps/backend:/app
+      - m2:/root/.m2
+      # target propio: no interfiere con el backend dev que esté corriendo
+      - backend-test-target:/app/target
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - app
+
+volumes:
+  # name explícito: cache de Maven compartida y estable aunque cambie COMPOSE_PROJECT_NAME.
+  m2:
+    name: fullstack-starter_m2
+  backend-target:
+  backend-test-target:
+  admin-web-node-modules:
+  admin-web-app-node-modules:
+  admin-web-api-types-node-modules:
+  mobile-node-modules:
+  mobile-api-types-node-modules:
+  pnpm-store:
+  node-tools-cache:

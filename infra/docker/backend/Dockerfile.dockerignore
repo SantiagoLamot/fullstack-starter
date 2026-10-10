@@ -1,0 +1,9 @@
+# Contexto = raíz del repo; solo se envía lo que necesita el backend.
+*
+!apps/backend
+!infra/docker/backend
+**/target
+**/.idea
+**/*.iml
+**/.env
+**/.env.*

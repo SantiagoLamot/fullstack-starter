@@ -1,0 +1,122 @@
+# Backend - base configuration.
+# Every value comes from environment variables (see .env.example at the repo root).
+server:
+  port: 8080
+  # Tomcat RemoteIpValve: X-Forwarded-For is honoured ONLY when the TCP peer is a private/Docker address
+  # (our nginx). A client hitting the backend directly cannot spoof its IP (rate limits use getRemoteAddr()).
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+      internal-proxies: '10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|0:0:0:0:0:0:0:1|::1'
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+
+spring:
+  application:
+    name: app-backend
+  datasource:
+    url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${MYSQL_DATABASE:app}?characterEncoding=UTF-8
+    username: ${MYSQL_USER:app}
+    password: ${MYSQL_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: ${TZ:America/Argentina/Buenos_Aires}
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  jackson:
+    time-zone: ${TZ:America/Argentina/Buenos_Aires}
+  mail:
+    host: ${MAIL_HOST:mailpit}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+            # When STARTTLS is on, never fall back to plain text (Gmail 587).
+            required: ${MAIL_SMTP_STARTTLS:false}
+          connectiontimeout: ${MAIL_SMTP_TIMEOUT_MS:5000}
+          timeout: ${MAIL_SMTP_TIMEOUT_MS:5000}
+          writetimeout: ${MAIL_SMTP_TIMEOUT_MS:5000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    # SMTP availability must not mark the app as DOWN (container healthchecks).
+    mail:
+      enabled: false
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+app:
+  name: ${APP_NAME:App}
+  time-zone: ${TZ:America/Argentina/Buenos_Aires}
+  public-web-url: ${APP_PUBLIC_WEB_URL:http://localhost:5173}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  mail:
+    from: ${MAIL_FROM:no-reply@example.local}
+    admin-notify: ${ADMIN_NOTIFY_EMAIL:}
+    # false: no mail is sent (only logged, without addresses or content).
+    enabled: ${MAIL_ENABLED:true}
+  security:
+    jwt:
+      secret: ${JWT_SECRET:}
+      issuer: ${JWT_ISSUER:app}
+      access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:PT15M}
+      refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:P30D}
+    login:
+      max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
+      lock-duration: ${LOGIN_LOCK_DURATION:PT15M}
+    invitation-ttl: ${INVITATION_TTL:PT72H}
+    password-reset-ttl: ${PASSWORD_RESET_TTL:PT1H}
+    # Cache of active sessions (claim sid, ADR 0009); PT0S disables it.
+    session-check-cache-ttl: ${SESSION_CHECK_CACHE_TTL:PT30S}
+    rate-limit:
+      reset-per-ip:
+        max-attempts: 5
+        window: PT15M
+      reset-per-email:
+        max-attempts: 3
+        window: PT1H
+      confirm-per-ip:
+        max-attempts: 10
+        window: PT15M
+      password-change-per-user:
+        max-attempts: 5
+        window: PT15M
+  bootstrap:
+    admin-email: ${ADMIN_BOOTSTRAP_EMAIL:}
+    admin-first-name: ${ADMIN_BOOTSTRAP_FIRST_NAME:}
+    admin-last-name: ${ADMIN_BOOTSTRAP_LAST_NAME:}
+  dev-seed:
+    admin-email: ${DEV_SEED_ADMIN_EMAIL:admin@example.local}
+    admin-password: ${DEV_SEED_ADMIN_PASSWORD:}
+    user-email: ${DEV_SEED_USER_EMAIL:user@example.local}
+    user-password: ${DEV_SEED_USER_PASSWORD:}

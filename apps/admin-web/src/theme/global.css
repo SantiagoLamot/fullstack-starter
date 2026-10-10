@@ -1,0 +1,15 @@
+body {
+  background-color: var(--app-bg);
+  /* Sin zoom por doble toque (regla "Sin zoom"). */
+  touch-action: manipulation;
+}
+
+/*
+ * Red de seguridad de la regla "Sin zoom": el tema de Mantine ya fija 16px en todos los campos;
+ * esto cubre inputs nativos que no pasen por Mantine.
+ */
+input,
+textarea,
+select {
+  font-size: 16px;
+}

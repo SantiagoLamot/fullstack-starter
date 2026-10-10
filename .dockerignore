@@ -1,0 +1,17 @@
+# Filtro por defecto para builds con contexto en la raíz del repo.
+# Cada Dockerfile de infra/docker/* tiene además su <Dockerfile>.dockerignore
+# (BuildKit lo usa en lugar de este archivo).
+.git
+.env
+.env.*
+!.env.example
+**/node_modules
+**/target
+**/dist
+**/.expo
+**/.vite
+**/coverage
+**/*.log
+.idea
+.vscode
+.claude
