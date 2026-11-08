@@ -13,6 +13,13 @@ Ya viene resuelto por la plantilla (no hace falta pedirlo): login, invitación/a
 1. _Funcionalidad 1_
 2. _Funcionalidad 2_
 
+## Mejoras validadas por investigación
+
+Lo que figura acá forma parte del alcance y lo mantiene `market-researcher` (informes en `docs/research/`).
+
+| # | Mejora | Por qué suma clientes | Esfuerzo | Informe | Estado |
+|---|---|---|---|---|---|
+
 ## Excluido
 
 - _Lo que explícitamente no se hace._

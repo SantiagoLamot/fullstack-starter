@@ -79,3 +79,5 @@ Aprendidos en el proyecto de origen:
 ## Flujo de trabajo con IA
 
 Abrí Claude Code en la raíz. Los agentes están en `.claude/agents/` y sus memorias en `docs/agents/` (viajan en git). El orquestador no escribe código: delega. Modelos: Opus para arquitectura y slice de referencia, Sonnet para el resto. Detalle en [`CLAUDE.md`](CLAUDE.md).
+
+**Investigación de mercado:** el agente `market-researcher` releva competidores y normativa del rubro, verifica la viabilidad de cada funcionalidad candidata (demanda, técnica, legal, costo y alcance multi-cliente) y suma las viables a `docs/scope.md` (ids R#) y `docs/roadmap.md`. Ejemplo de prompt: "Lanzá market-researcher: investigá qué ofrecen los competidores de nuestro rubro, verificá qué funcionalidades serían viables y sumá las viables al alcance y al roadmap."

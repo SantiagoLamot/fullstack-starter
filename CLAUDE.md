@@ -53,7 +53,8 @@ Plantilla de monorepo: app móvil (Expo), panel admin web (React) y backend (Spr
 ## Flujo de trabajo con agentes
 
 - El orquestador planifica, delega, integra y revisa. Los subagentes implementan. Toda entrega pasa por `qa-reviewer`.
-- **Regla fija: todo lo que el usuario le pide al orquestador se delega a un agente.** El orquestador NO escribe código, specs ni documentación por su cuenta (ni `docs/`, ni `scope.md`, ni `roadmap.md`): solo lee lo mínimo para armar el prompt, delega al agente que corresponda (`architect` para specs y decisiones, `docs-writer` para docs, `backend-dev`/`mobile-dev`/`admin-web-dev`/`db-engineer`/`devops` para código, `qa-reviewer` para revisar) e integra el resultado. Única excepción: este archivo, cuando el usuario pide registrar una regla.
+- **Regla fija: todo lo que el usuario le pide al orquestador se delega a un agente.** El orquestador NO escribe código, specs ni documentación por su cuenta (ni `docs/`, ni `scope.md`, ni `roadmap.md`): solo lee lo mínimo para armar el prompt, delega al agente que corresponda (`architect` para specs y decisiones, `docs-writer` para docs, `market-researcher` para investigación de mercado y viabilidad, `backend-dev`/`mobile-dev`/`admin-web-dev`/`db-engineer`/`devops` para código, `qa-reviewer` para revisar) e integra el resultado. Única excepción: este archivo, cuando el usuario pide registrar una regla.
+- Las mejoras VIABLES de `market-researcher` entran a `docs/scope.md` con id R# y se implementan como cualquier ítem del alcance, pasando por `qa-reviewer`.
 - Cambios de estructura o convenciones globales ⇒ actualizar este archivo y `docs/architecture.md`.
 - Versiones fijadas: ver `docs/adr/0001-stack.md`.
 - **Alcance:** el brief va a `docs/scope.md` (preguntas abiertas P# y supuestos vigentes). Roadmap por fases en `docs/roadmap.md`: cada fase va backend primero y frontends en paralelo.
