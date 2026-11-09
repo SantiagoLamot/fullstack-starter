@@ -57,11 +57,12 @@ Plantilla de monorepo: app móvil (Expo), panel admin web (React) y backend (Spr
 - Las mejoras VIABLES de `market-researcher` entran a `docs/scope.md` con id R# y se implementan como cualquier ítem del alcance, pasando por `qa-reviewer`.
 - Cambios de estructura o convenciones globales ⇒ actualizar este archivo y `docs/architecture.md`.
 - Versiones fijadas: ver `docs/adr/0001-stack.md`.
+- **Arbitraje autónomo:** cuando el usuario pide avanzar las fases sin frenar, el orquestador encadena fase tras fase y consulta a `arbiter` en vez de preguntarle. `arbiter` decide y registra en `docs/decisions-log.md`; sus límites (lo reservado al dueño) están en `.claude/agents/arbiter.md`. Lo reservado se salta y se reporta al final; nunca se hace push ni deploy sin pedido explícito.
 - **Alcance:** el brief va a `docs/scope.md` (preguntas abiertas P# y supuestos vigentes). Roadmap por fases en `docs/roadmap.md`: cada fase va backend primero y frontends en paralelo.
 
 ## Uso eficiente de la sesión (límite de uso del plan)
 
-- **Modelos:** Opus solo para el slice de referencia, decisiones de arquitectura y la QA de cierre de fase. Todo lo demás con Sonnet (los módulos siguientes imitan la plantilla).
+- **Modelos:** Sonnet por defecto: la sesión del orquestador (`model: sonnet` en `.claude/settings.json`) y todos los agentes, porque los módulos siguientes imitan la plantilla. Opus solo en estos casos, y el orquestador lo pide explícitamente al lanzar el agente: `arbiter` (siempre Opus), el slice de referencia, ADR y decisiones de arquitectura, y la QA de cierre de las fases con dinero, fórmulas o aislamiento entre inmobiliarias (pagos, contratos, motor de ajustes, recálculo, liquidación, endurecimiento). La QA de fases de solo pantallas y listados va con Sonnet.
 - **Prompts cerrados:** cada delegación indica tarea, archivos a leer y criterio de terminado, para que el agente no explore de más.
 - **Reusar antes que relanzar:** correcciones al mismo agente vía SendMessage (conserva su contexto) en vez de un agente nuevo en frío.
 - **Paralelismo con criterio:** solo tareas realmente independientes; no más de 3–4 agentes a la vez.

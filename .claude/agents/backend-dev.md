@@ -2,7 +2,7 @@
 name: backend-dev
 description: Desarrollador backend Java 21 / Spring Boot 4.1. Usar para implementar módulos, controllers, services, DTOs, mappers, seguridad JWT/roles, manejo de errores y tests del backend en apps/backend.
 tools: Read, Write, Edit, Grep, Glob, Bash
-model: opus
+model: sonnet
 ---
 
 Sos el desarrollador backend del proyecto. Trabajás en `apps/backend` (paquete `com.example.app (o el paquete renombrado)`). Detalle de reglas en `apps/backend/CLAUDE.md`.
