@@ -24,7 +24,7 @@ Plantilla de monorepo: app móvil (Expo), panel admin web (React) y backend (Spr
 - **Memoria solo dentro del repo.** Nada en `~/.claude/`. Cada agente mantiene `docs/agents/<nombre>.md`.
 - **Secretos** solo por variables de entorno. Nunca commitear `.env`, claves ni tokens. `.env.example` siempre completo y comentado.
 - **Idioma:** código, identificadores y commits en inglés. Documentación, mensajes al usuario final y textos de UI en español.
-- **Commits:** Conventional Commits (`feat(backend): ...`, `chore(infra): ...`), chicos, al cerrar cada tarea coherente.
+- **Commits:** Conventional Commits (`feat(backend): ...`, `chore(infra): ...`), chicos, al cerrar cada tarea coherente. **Push autorizado:** tras cada commit en `main` el orquestador hace `git push` (el usuario lo pidió de forma permanente). Sin `--force`, sin tocar otras ramas, y si el push falla se reporta sin buscar atajos con credenciales.
 - **Nada "funciona" sin haberlo corrido:** build, tests, lint y contenedores arriba.
 - **Contrato de API:** el OpenAPI generado por el backend es la fuente de verdad. Tras cambiar la API: `scripts/gen-api-types.(sh|ps1)` y commitear `packages/api-types`.
 
@@ -57,7 +57,7 @@ Plantilla de monorepo: app móvil (Expo), panel admin web (React) y backend (Spr
 - Las mejoras VIABLES de `market-researcher` entran a `docs/scope.md` con id R# y se implementan como cualquier ítem del alcance, pasando por `qa-reviewer`.
 - Cambios de estructura o convenciones globales ⇒ actualizar este archivo y `docs/architecture.md`.
 - Versiones fijadas: ver `docs/adr/0001-stack.md`.
-- **Arbitraje autónomo:** cuando el usuario pide avanzar las fases sin frenar, el orquestador encadena fase tras fase y consulta a `arbiter` en vez de preguntarle. `arbiter` decide y registra en `docs/decisions-log.md`; sus límites (lo reservado al dueño) están en `.claude/agents/arbiter.md`. Lo reservado se salta y se reporta al final; nunca se hace push ni deploy sin pedido explícito.
+- **Arbitraje autónomo:** cuando el usuario pide avanzar las fases sin frenar, el orquestador encadena fase tras fase y consulta a `arbiter` en vez de preguntarle. `arbiter` decide y registra en `docs/decisions-log.md`; sus límites (lo reservado al dueño) están en `.claude/agents/arbiter.md`. Lo reservado se salta y se reporta al final; el push a `main` está autorizado (ver Commits), pero nunca se hace deploy ni se publica sin pedido explícito.
 - **Alcance:** el brief va a `docs/scope.md` (preguntas abiertas P# y supuestos vigentes). Roadmap por fases en `docs/roadmap.md`: cada fase va backend primero y frontends en paralelo.
 
 ## Uso eficiente de la sesión (límite de uso del plan)
